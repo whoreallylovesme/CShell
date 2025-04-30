@@ -12,6 +12,7 @@ That's my shell on C programming language. It's can execute a bash commands like
 
 ## Using
 Clone repo. There's a Makefile inside this. 
+
 Basic commands:
 - to clean trash
 ```bash
