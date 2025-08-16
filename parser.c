@@ -100,7 +100,6 @@ seq_operation(enum TokenKind kind)
     case T_BACK: return OP_BACKGROUND; 
     default: abort();
     }
-    return 0;
 }
 
 static int
@@ -163,6 +162,7 @@ seq2(void)
     if ((r = pipeline()) != 0) {
         return r;
     }
+
     Command c;
     if ((r = init_sequence_command(&c, KIND_SEQ2)) != 0) {
         return r;
@@ -171,6 +171,7 @@ seq2(void)
         free_command(&c);
         return r;
     }
+
     while (t.kind == T_CONJ || t.kind == T_DISJ) {
 
         if ((r = append_operation_to_sequence(&c, seq_operation(t.kind))) != 0) {
@@ -251,7 +252,6 @@ redirect_mode(enum TokenKind kind)
         case T_APPEND: return RD_APPEND;
         default: abort();
     }
-    return 0;
 }
 
 static int
@@ -261,6 +261,7 @@ redirect(void)
     if ((r = simple()) != 0) {
         return r;
     }
+
     while (t.kind == T_IN || t.kind == T_OUT || t.kind == T_APPEND) {
 
         int mode = redirect_mode(t.kind);
@@ -268,6 +269,7 @@ redirect(void)
         if ((r = next_token(&t)) != 0) {
             return r;
         }
+
         if (t.kind != T_WORD) {
             return E_WORD_EXPECTED_REDIRECT;
         }

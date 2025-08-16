@@ -1,65 +1,68 @@
-enum 
+enum CommandKind
 {
-    KIND_SIMPLE,
-    KIND_REDIRECT,
-    KIND_PIPELINE,
-    KIND_SEQ1,
-    KIND_SEQ2,
-    RD_INPUT,
-    RD_OUTPUT,
-    RD_APPEND,
-    OP_BACKGROUND,
-    OP_DISJUNCT,
-    OP_CONJUNCT,
-    OP_SEQ,
+    KIND_SIMPLE, KIND_PIPELINE, 
+    KIND_SEQ1, KIND_SEQ2, KIND_REDIRECT
 };
 
-struct Com {
+enum CommandOP
+{
+    OP_SEQ, OP_BACKGROUND, 
+    OP_CONJUNCT, OP_DISJUNCT
+};
+
+enum CommandRD
+{
+    RD_INPUT, RD_OUTPUT, RD_APPEND
+};
+
+typedef struct Command 
+{
     int kind;
-    union {
-        struct {
-            int pipeline_size;
-            struct Com *pipeline_commands;
-        };
-        struct {
-            int rd_mode;
-            char *rd_path;
-            struct Com *rd_command;
-        };
-        struct {
-            int seq_size;
-            int *seq_operations;
-            struct Com *seq_commands;
-        };
-        struct {
-            int argc;
+
+    union 
+    {
+        // Simple
+        struct 
+        {
+            int argc;    
             char **argv;
         };
+
+        // Pipeline
+        struct 
+        {
+            int pipeline_size;
+            struct Command *pipeline_commands;
+        };
+
+        // Seq
+        struct 
+        {
+            int seq_size;
+            struct Command *seq_commands;
+            int *seq_operations;
+        };
+
+        // Redirect
+        struct 
+        {
+            int rd_mode;
+            char *rd_path;
+            struct Command *rd_command;
+        };
     };
-};
+} Command;
 
-typedef struct Com Command;
+void free_command(Command *cmd);
+int next_command(Command *cmd);
 
-void free_command(Command *);
+int init_sequence_command(Command *cmd, int knd);
+int init_pipeline_command(Command *cmd);
+int init_redirect_command(Command *cmd);
+int init_simple_command(Command *cmd);
 
-int next_command(Command *);
-
-int init_pipeline_command(Command *);
-
-int append_to_pipeline(Command *, Command *);
-
-int init_redirect_command(Command *);
-
-int set_rd_command(Command *, Command *);
-
-int init_simple_command(Command *);
-
-int append_word_simple_command(Command *, char *);
-
-int init_sequence_command(Command *, int);
-
-int append_command_to_sequence(Command *, Command *);
-
-int append_operation_to_sequence(Command *, int);
-
-
+int append_word_simple_command(Command *cmd, char *txt);
+int append_to_pipeline(Command *src, Command *dst);
+int append_command_to_sequence(Command *src, Command *dst);
+int append_operation_to_sequence(Command *cmd, int knd);
+int set_rd_command(Command *src, Command *dst);

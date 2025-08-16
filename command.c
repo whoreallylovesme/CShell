@@ -1,159 +1,144 @@
-#include <stdio.h>
-#include <stdlib.h>
-
 #include "command.h"
-
+#include <stdlib.h>
 enum { BUF_SIZE = 4096 };
 
-int
-init_sequence_command(Command *c, int kind)
+
+
+void 
+free_command(Command *cmd)
 {
-    c->kind = kind;
-    c->seq_size = 0;
-    c->seq_commands = malloc(sizeof(*c->seq_commands)*BUF_SIZE);
-    if (c->seq_commands == NULL) {
-        return -1;
+    switch (cmd->kind) {
+    case KIND_SIMPLE:
+        for (int i = 0; i < cmd->argc; ++i) {
+            free((cmd->argv)[i]);
+        }
+        free(cmd->argv);
+        break;
+    case KIND_PIPELINE:
+        for (int i = 0; i < cmd->pipeline_size; ++i) {
+            free_command(cmd->pipeline_commands + i);
+        }
+        free(cmd->pipeline_commands);
+        break;
+    case KIND_SEQ1:
+    case KIND_SEQ2:
+        for (int i = 0; i < cmd->seq_size; ++i) {
+            free_command(cmd->seq_commands + i);
+        }
+        free(cmd->seq_commands);
+        free(cmd->seq_operations);
+        break;
+    case KIND_REDIRECT:
+        free_command(cmd->rd_command);
+        free(cmd->rd_path);
+        free(cmd->rd_command);
+        break;
+    default:
+        break;
     }
-    c->seq_operations = malloc(sizeof(*c->seq_operations)*BUF_SIZE);
-    if (c->seq_operations == NULL) {
-        return -1;
+}
+
+
+
+
+
+int
+init_sequence_command(Command *cmd, int knd)
+{
+    if (knd != KIND_SEQ1 && knd != KIND_SEQ2) {
+        return 1;
     }
+    cmd->kind = knd;
+    cmd->seq_size = 0;
+    cmd->seq_commands = 
+            malloc(sizeof(*cmd->seq_commands) * BUF_SIZE);
+    cmd->seq_operations = 
+            malloc(sizeof(*cmd->seq_operations) * BUF_SIZE);
     return 0;
 }
 
-int
-append_command_to_sequence(Command *c, Command *cmd)
+int 
+init_pipeline_command(Command *cmd)
 {
-    // c->seq_commands = realloc(c->seq_commands, (c->seq_size + 1)*sizeof(Command));
-    //if (c->seq_commands == NULL) {
-    //    return -1;
-    //}
-    *(c->seq_commands+c->seq_size) = *cmd;
-    c->seq_size++;
+    cmd->kind = KIND_PIPELINE;
+    cmd->pipeline_size = 0;
+    cmd->pipeline_commands = 
+            malloc(sizeof(*cmd->pipeline_commands) * BUF_SIZE);
     return 0;
 }
 
-int
-append_operation_to_sequence(Command *c, int op)
+
+int 
+init_redirect_command(Command *cmd)
 {
-    //c->seq_operations = realloc(c->seq_operations, (c->seq_size + 1)*sizeof(int));
-    //if (c->seq_operations == NULL) {
-    //    return -1;
-    //}
-    *(c->seq_operations+c->seq_size - 1) = op;
+    cmd->kind = KIND_REDIRECT;
+    cmd->rd_mode = -1;
+    cmd->rd_path = NULL;
+    cmd->rd_command = 
+            malloc(sizeof(*cmd->rd_command));
     return 0;
 }
 
-int
-init_pipeline_command(Command *c)
+
+int 
+init_simple_command(Command *cmd)
 {
-    c->kind = KIND_PIPELINE;
-    c->pipeline_size = 0;
-    c->pipeline_commands = malloc(sizeof(*c->pipeline_commands)*BUF_SIZE);
-    if (c->pipeline_commands == NULL) {
-        return -1;
+    cmd->kind = KIND_SIMPLE;
+    cmd->argv = 
+            malloc(sizeof(*cmd->argv) * BUF_SIZE);
+    cmd->argc = 0;
+    return 0;
+}
+
+int 
+append_word_simple_command(Command *cmd, char *txt)
+{
+    if (cmd->kind != KIND_SIMPLE) {
+        return 1;
     }
+    (cmd->argv)[cmd->argc++] = txt;
+    (cmd->argv)[cmd->argc] = NULL;
     return 0;
 }
 
-int
-append_to_pipeline(Command *c, Command *cmd)
+int 
+append_to_pipeline(Command *dst, Command *src)
 {
-    //c->pipeline_commands = realloc(c->pipeline_commands, (c->pipeline_size+1)*sizeof(Command));
-    //if (c->pipeline_commands == NULL) {
-    //    return -1;
-    //}
-    *(c->pipeline_commands + c->pipeline_size) = *cmd;
-    c->pipeline_size++;
-    return 0;
-}
-
-int
-init_redirect_command(Command *c)
-{
-    c->kind = KIND_REDIRECT;
-    c->rd_command = malloc(sizeof(*c->rd_command)*BUF_SIZE);
-    if (c->rd_command == NULL) {
-        return -1;
+    if (dst->kind != KIND_PIPELINE) {
+        return 1;
     }
-    c->rd_path = NULL;
-    c->rd_mode = -1;
+    (dst->pipeline_commands)[dst->pipeline_size++] = *src;
+    return 0;    
+}
+
+int 
+append_command_to_sequence(Command *dst, Command *src)
+{
+    if (dst->kind != KIND_SEQ1 && 
+            dst->kind != KIND_SEQ2) {
+        return 1;
+    }    
+    (dst->seq_commands)[dst->seq_size++] = *src;
     return 0;
 }
 
-int
-set_rd_command(Command *c, Command *cmd)
+int 
+append_operation_to_sequence(Command *cmd, int knd)
 {
-    //c->rd_command = realloc(c->rd_command, (sizeof(Command)));
-    //if (c->rd_command == NULL) {
-    //    return -1;
-    //}
-    *(c->rd_command) = *cmd;
+    if (cmd->kind != KIND_SEQ1 && 
+            cmd->kind != KIND_SEQ2) {
+        return 1;
+    } 
+    (cmd->seq_operations)[cmd->seq_size - 1] = knd;
     return 0;
 }
 
-int
-init_simple_command(Command *c)
+int 
+set_rd_command(Command *dst, Command *src)
 {
-    c->kind = KIND_SIMPLE;
-    c->argv = malloc(sizeof(*c->argv)*BUF_SIZE);
-    if (c->argv == NULL) {
-        return -1;
-    }
-    c->argc = 0;
-    return 0;
-}
-
-int
-append_word_simple_command(Command *c, char *arg)
-{
-    //c->argv = realloc(c->argv, (c->argc + 2)*sizeof(char*));
-    //if (c->argv == NULL) {
-    //    return -1;
-    //}
-    c->argv[c->argc] = arg;
-    *(c->argv+c->argc+1) = NULL;
-    c->argc++;
-    return 0;
-}
-
-void free_command(Command *c)
-{
-    if (c == NULL) {
-        return;
-    }
-    switch (c->kind)
-    {
-        case KIND_PIPELINE:
-            for (int i = 0; i < c->pipeline_size; ++i) {
-                free_command(c->pipeline_commands + i);
-            }
-            free(c->pipeline_commands);
-            break;
-        case KIND_REDIRECT:
-            if (c->rd_path != NULL) {
-                free(c->rd_path);
-            }
-            if (c->rd_command != NULL) {
-                free_command(c->rd_command);
-                free(c->rd_command);
-            }
-            break;
-        case KIND_SEQ1:
-        case KIND_SEQ2:
-            for (int i = 0; i < c->seq_size; ++i) {
-                free_command(c->seq_commands + i);
-            }
-            free(c->seq_commands);
-            free(c->seq_operations);
-            break;
-        case KIND_SIMPLE:
-            for (int i = 0; i < c->argc; ++i) {
-                free(c->argv[i]);
-            }
-            free(c->argv);
-            break;
-        default:
-            break;
-    }
+    if (dst->kind != KIND_REDIRECT) {
+        return 1;
+    }     
+    *(dst->rd_command) = *src;
+    return 0;  
 }

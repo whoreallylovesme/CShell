@@ -1,34 +1,33 @@
 #include <stdio.h>
 
-int init_scanner(FILE *);
-
-enum TokenKind
+enum TokenKind 
 {
-    T_CONJ,
-    T_DISJ,
-    T_SEQ,
-    T_BACK,
-    T_EOF,
-    T_NEWLINE,
-    T_WORD,
-    T_OPEN,
-    T_PIPE,
-    T_IN,
+    T_EOF, 
+    T_NEWLINE, 
+    T_OPEN, 
+    T_CLOSE, 
+    T_SEQ, 
+    T_CONJ, 
+    T_BACK, 
+    T_DISJ, 
+    T_PIPE, 
+    T_IN, 
+    T_APPEND, 
     T_OUT,
-    T_APPEND,
-    T_CLOSE
+    T_WORD
 };
-
-struct Tok {
+  
+typedef struct Token
+{
     int kind;
     char *text;
     size_t len;
     size_t capacity;
-};
+} Token;
 
-typedef struct Tok Token;
 
-void free_token(Token *);
 
-int next_token(Token *);
-
+int init_scanner(FILE *f);
+void free_scanner(void);
+int next_token(Token *token);
+void free_token(Token *token);

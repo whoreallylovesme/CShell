@@ -1,48 +1,70 @@
 #include <stdio.h>
-#include <sys/wait.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include <stdlib.h>
 
 #include "command.h"
-#include "runner.h"
 #include "errors.h"
 #include "parser.h"
-#include "scanner.h"
+#include "runner.h"
+
+
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/wait.h>
+
 
 int
-main(void)
+init_empty_command(Command *c)
+{
+    c->kind = -999;
+    return 0;
+}
+
+int
+main(int argc, char *argv[])
 {
     int r;
-    int status;
     while (1) {
         if ((r = init_parser(stdin)) != 0) {
             fprintf(stderr, "%s\n", error_message(r));
             return 0;
         }
-        
-		Command c;
+
+        Command c;
+        // init_empty_command(&c);
         if ((r = next_command(&c)) == EOF && feof(stdin)) {
             free_parser();
             break;
         } else if (r != 0) {
             fprintf(stderr, "%s\n", error_message(r));
-
             free_parser();
+            // printf("HERE RN\n");
+            // break;
             continue;
         }
-		if (fork() == 0) {
-			status = run_command(&c);
-			if (status != 0) {
-				exit(1);
-			}
-			exit(0);
-		}
-		free_command(&c);
-		free_parser();
+
+        
+        // if (c.kind == -999) {
+        //     break;
+        // }
+        
+        if (fork() == 0) {
+            int st = run_command(&c);
+            exit(st);
+        }
+        // int st;
+        // wait(&st);
+
+        // if (!(WIFEXITED(st) && WEXITSTATUS(st) == 0)) {
+        //     free_command(&c);
+        //     free_parser();
+        //     break;
+        // }
+    
+
+        free_command(&c);
+        free_parser();
     }
-	
-	while (wait(NULL) != -1) {
-	}	
+
+    // printf("HERE\n");
+    while (wait(NULL) > 0);
     return 0;
 }

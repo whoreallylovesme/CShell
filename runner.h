@@ -1,1 +1,1 @@
-int run_command(Command *);
+int run_command(Command *cmd);
